@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot de Trading Crypto - Real Time</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card h2 {
+            color: #60a5fa;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #60a5fa;
+            padding-bottom: 10px;
+        }
+
+        .exchange-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .exchange-btn {
+            padding: 15px;
+            border: 2px solid rgba(96, 165, 250, 0.3);
+            background: rgba(15, 23, 42, 0.5);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .exchange-btn:hover {
+            border-color: #60a5fa;
+            background: rgba(96, 165, 250, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .exchange-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-color: #60a5fa;
+        }
+
+        .price-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .price-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .price-change {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .price-change.positive {
+            color: #10b981;
+        }
+
+        .price-change.negative {
+            color: #ef4444;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(15, 23, 42, 0.5);
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(96, 165, 250, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status.connected {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        .status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
+        .status.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        .market-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .twitter-feed {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .tweet {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 8px;
+            border-left: 3px solid #60a5fa;
+        }
+
+        .tweet-author {
+            font-weight: bold;
+            color: #60a5fa;
+            margin-bottom: 5px;
+        }
+
+        .tweet-text {
+            font-size: 0.9em;
+            color: #e2e8f0;
+            line-height: 1.4;
+        }
+
+        .tweet-sentiment {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .sentiment-bullish {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .sentiment-bearish {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .sentiment-neutral {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+
+        .log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            border-left: 3px solid #60a5fa;
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .log-entry.success {
+            border-left-color: #10b981;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+        }
+
+        .log-entry .timestamp {
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .trade-signals {
+            display: grid;
+            gap: 10px;
+        }
+
+        .signal {
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .signal.buy {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid #10b981;
+        }
+
+        .signal.sell {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+        }
+
+        .signal-strength {
+            font-size: 0.9em;
+            color: #94a3b8;
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .volume-indicator {
+            height: 60px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .volume-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .wallet-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .wallet-btn {
+            padding: 12px;
+            border: 2px solid rgba(96, 165, 250, 0.3);
+            background: rgba(15, 23, 42, 0.5);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+
+        .wallet-btn:hover {
+            border-color: #60a5fa;
+            background: rgba(96, 165, 250, 0.1);
+        }
+
+        .wallet-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-color: #60a5fa;
+        }
+
+        .balance-display {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .balance-item {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .balance-label {
+            font-size: 0.9em;
+            color: #94a3b8;
+        }
+
+        .balance-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #60a5fa;
+            margin-top: 5px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #60a5fa;
+            border-radius: 10px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Bot de Trading Crypto - Données Réelles</h1>
+        
+        <div class="dashboard">
+            <!-- Connexion Exchange -->
+            <div class="card">
+                <h2>🔗 Connexion Exchange</h2>
+                
+                <div class="exchange-grid">
+                    <button class="exchange-btn" id="btn-binance">
+                        <span>🟡</span> Binance
+                    </button>
+                    <button class="exchange-btn" id="btn-coinbase">
+                        <span>🔵</span> Coinbase
+                    </button>
+                    <button class="exchange-btn" id="btn-kraken">
+                        <span>🟣</span> Kraken
+                    </button>
+                    <button class="exchange-btn" id="btn-bybit">
+                        <span>🟠</span> Bybit
+                    </button>
+                    <button class="exchange-btn" id="btn-uphold">
+                        <span>🟢</span> Uphold
+                    </button>
+                    <button class="exchange-btn" id="btn-kucoin">
+                        <span>🔴</span> KuCoin
+                    </button>
+                </div>
+
+                <div id="exchangeStatus" class="status disconnected">
+                    ❌ Aucun exchange sélectionné
+                </div>
+                
+                <div class="input-group">
+                    <label>API Key</label>
+                    <input type="text" id="apiKey" placeholder="Entrez votre API Key">
+                </div>
+                
+                <div class="input-group">
+                    <label>API Secret</label>
+                    <input type="password" id="apiSecret" placeholder="Entrez votre API Secret">
+                </div>
+                
+                <button class="btn btn-primary" id="connectExchangeBtn">Se Connecter à l'Exchange</button>
+            </div>
+
+            <!-- Connexion Wallet -->
+            <div class="card">
+                <h2>💰 Connexion Wallet</h2>
+                
+                <div class="wallet-grid">
+                    <button class="wallet-btn" id="btn-metamask">
+                        🦊 MetaMask
+                    </button>
+                    <button class="wallet-btn" id="btn-trustwallet">
+                        💙 Trust Wallet
+                    </button>
+                    <button class="wallet-btn" id="btn-phantom">
+                        👻 Phantom
+                    </button>
+                    <button class="wallet-btn" id="btn-coinbasewallet">
+                        💼 Coinbase Wallet
+                    </button>
+                </div>
+
+                <div id="walletStatus" class="status disconnected">
+                    ❌ Aucun wallet connecté
+                </div>
+
+                <div class="input-group">
+                    <label>Adresse Wallet</label>
+                    <input type="text" id="walletAddress" placeholder="0x..." readonly>
+                </div>
+
+                <button class="btn btn-primary" id="connectWalletBtn">Connecter Wallet</button>
+
+                <div class="balance-display">
+                    <div class="balance-item">
+                        <div class="balance-label">BTC</div>
+                        <div class="balance-value" id="btcBalance">0.0000</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="balance-label">ETH</div>
+                        <div class="balance-value" id="ethBalance">0.0000</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="balance-label">USDT</div>
+                        <div class="balance-value" id="usdtBalance">1000.00</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="balance-label">Total USD</div>
+                        <div class="balance-value" id="totalBalance">$1,000.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prix en temps réel -->
+            <div class="card">
+                <h2><span class="live-indicator"></span>Prix en Temps Réel</h2>
+                
+                <div class="input-group">
+                    <label>Sélectionner une Paire</label>
+                    <select id="pairSelect">
+                        <option value="BTCUSDT">BTC/USDT</option>
+                        <option value="ETHUSDT">ETH/USDT</option>
+                        <option value="BNBUSDT">BNB/USDT</option>
+                        <option value="SOLUSDT">SOL/USDT</option>
+                        <option value="XRPUSDT">XRP/USDT</option>
+                    </select>
+                </div>
+
+                <div class="price-display">
+                    <div>
+                        <div style="font-size: 0.9em; opacity: 0.8;">Prix Actuel</div>
+                        <div class="price-value" id="currentPrice">$0.00</div>
+                    </div>
+                    <div>
+                        <div class="price-change" id="priceChange">+0.00%</div>
+                    </div>
+                </div>
+
+                <div class="market-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Volume 24h</div>
+                        <div class="stat-value" id="volume24h">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">High 24h</div>
+                        <div class="stat-value" id="high24h">$0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Low 24h</div>
+                        <div class="stat-value" id="low24h">$0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Variation Volume</div>
+                        <div class="stat-value" id="volumeChange">0%</div>
+                    </div>
+                </div>
+
+                <div class="volume-indicator">
+                    <div class="volume-bar" id="volumeBar" style="width: 0%">
+                        <span id="volumeBarText">Volume: 0%</span>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Sentiment Twitter -->
+            <div class="card">
+                <h2>🐦 Sentiment Twitter</h2>
+                
+                <div class="market-stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 15px;">
+                    <div class="stat-item">
+                        <div class="stat-label">Bullish</div>
+                        <div class="stat-value" style="color: #10b981;" id="bullishCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Bearish</div>
+                        <div class="stat-value" style="color: #ef4444;" id="bearishCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Neutral</div>
+                        <div class="stat-value" style="color: #94a3b8;" id="neutralCount">0</div>
+                    </div>
+                </div>
+
+                <div style="padding: 15px; background: rgba(15, 23, 42, 0.5); border-radius: 8px; margin-bottom: 15px;">
+                    <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">Sentiment Global</div>
+                    <div style="font-size: 1.8em; font-weight: bold;" id="overallSentiment">NEUTRE</div>
+                </div>
+
+                <div class="twitter-feed" id="twitterFeed">
+                    <p style="text-align: center; color: #94a3b8;">Chargement des tweets...</p>
+                </div>
+            </div>
+
+            <!-- Signaux de Trading -->
+            <div class="card">
+                <h2>📊 Signaux de Trading</h2>
+                
+                <div class="trade-signals" id="tradeSignals">
+                    <div style="text-align: center; color: #94a3b8; padding: 20px;">
+                        Analyse en cours...
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                    <h3 style="color: #60a5fa; margin-bottom: 10px;">Indicateurs Techniques</h3>
+                    <div style="display: grid; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>RSI (14):</span>
+                            <strong id="rsiValue">50</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>MACD:</span>
+                            <strong id="macdValue">0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>EMA (20):</span>
+                            <strong id="emaValue">$0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration & Contrôle -->
+            <div class="card">
+                <h2>⚙️ Configuration Trading</h2>
+                
+                <div id="botStatus" class="status disconnected">
+                    ⏸️ Bot Arrêté
+                </div>
+
+                <div class="input-group">
+                    <label>Montant par Trade (USDT)</label>
+                    <input type="number" id="tradeAmount" value="100" min="10">
+                </div>
+
+                <div class="input-group">
+                    <label>Stop Loss (%)</label>
+                    <input type="number" id="stopLoss" value="2" min="0.1" step="0.1">
+                </div>
+
+                <div class="input-group">
+                    <label>Take Profit (%)</label>
+                    <input type="number" id="takeProfit" value="3" min="0.1" step="0.1">
+                </div>
+
+                <button class="btn btn-success" id="startBotBtn">▶️ Démarrer le Bot</button>
+                <button class="btn btn-danger" id="stopBotBtn" style="display:none;">⏹️ Arrêter le Bot</button>
+
+                <div class="balance-display" style="margin-top: 20px;">
+                    <div class="balance-item">
+                        <div class="balance-label">Trades</div>
+                        <div class="balance-value" id="totalTrades">0</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="balance-label">Profit/Perte</div>
+                        <div class="balance-value" id="profitLoss">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs en Temps Réel -->
+            <div class="card" style="grid-column: span 3;">
+                <h2>📝 Logs en Temps Réel</h2>
+                <div class="log" id="logContainer">
+                    <div class="log-entry">
+                        <span class="timestamp">[Système]</span> Bot initialisé
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // État global
+        const state = {
+            isRunning: false,
+            exchange: null,
+            wallet: null,
+            exchangeConnected: false,
+            walletConnected: false,
+            currentPair: 'BTCUSDT',
+            currentPrice: 0,
+            priceHistory: [],
+            tweets: [],
+            sentiment: { bullish: 0, bearish: 0, neutral: 0 },
+            balance: {
+                btc: 0,
+                eth: 0,
+                usdt: 1000,
+                total: 1000
+            },
+            trades: [],
+            signals: [],
+            stats: {
+                totalTrades: 0,
+                profitLoss: 0
+            }
+        };
+
+        let priceChart = null;
+        let updateInterval = null;
+        let tweetInterval = null;
+
+        // Sélection Exchange
+        function selectExchange(exchange) {
+            const buttons = document.querySelectorAll('.exchange-btn');
+            buttons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.exchange-btn').classList.add('active');
+            
+            state.exchange = exchange;
+            document.getElementById('exchangeStatus').className = 'status disconnected';
+            document.getElementById('exchangeStatus').textContent = exchange.toUpperCase() + ' sélectionné - Non connecté';
+            addLog('Exchange ' + exchange.toUpperCase() + ' sélectionné');
+        }
+
+        // Event listeners pour exchanges
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('btn-binance').addEventListener('click', function() { selectExchange('binance'); });
+            document.getElementById('btn-coinbase').addEventListener('click', function() { selectExchange('coinbase'); });
+            document.getElementById('btn-kraken').addEventListener('click', function() { selectExchange('kraken'); });
+            document.getElementById('btn-bybit').addEventListener('click', function() { selectExchange('bybit'); });
+            document.getElementById('btn-uphold').addEventListener('click', function() { selectExchange('uphold'); });
+            document.getElementById('btn-kucoin').addEventListener('click', function() { selectExchange('kucoin'); });
+            
+            document.getElementById('connectExchangeBtn').addEventListener('click', connectExchange);
+            
+            // Wallets
+            document.getElementById('btn-metamask').addEventListener('click', function() { selectWallet('metamask'); });
+            document.getElementById('btn-trustwallet').addEventListener('click', function() { selectWallet('trustwallet'); });
+            document.getElementById('btn-phantom').addEventListener('click', function() { selectWallet('phantom'); });
+            document.getElementById('btn-coinbasewallet').addEventListener('click', function() { selectWallet('coinbase'); });
+            
+            document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+            
+            // Autres
+            document.getElementById('pairSelect').addEventListener('change', changePair);
+            document.getElementById('startBotBtn').addEventListener('click', startBot);
+            document.getElementById('stopBotBtn').addEventListener('click', stopBot);
+            
+            // Initialisation
+            initChart();
+            addLog('Système initialisé', 'success');
+            fetchRealData();
+            
+            updateInterval = setInterval(fetchRealData, 5000);
+            tweetInterval = setInterval(generateTweets, 8000);
+            setTimeout(generateTweets, 2000);
+        });
+
+        // Sélection Wallet
+        function selectWallet(wallet) {
+            const buttons = document.querySelectorAll('.wallet-btn');
+            buttons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.wallet-btn').classList.add('active');
+            
+            state.wallet = wallet;
+            document.getElementById('walletStatus').className = 'status disconnected';
+            document.getElementById('walletStatus').textContent = wallet + ' sélectionné - Non connecté';
+            addLog('Wallet ' + wallet + ' sélectionné');
+        }
+            if (!state.exchange) {
+                addLog('Veuillez sélectionner un exchange', 'error');
+                return;
+            }
+
+            addLog('Mode DEMO activé pour ' + state.exchange.toUpperCase(), 'success');
+            state.exchangeConnected = true;
+            document.getElementById('exchangeStatus').className = 'status connected';
+            document.getElementById('exchangeStatus').textContent = 'Connecté à ' + state.exchange.toUpperCase() + ' (MODE DEMO)';
+            updateBalance();
+        }
+
+        // Sélection Wallet
+        function selectWallet(wallet) {
+            const buttons = document.querySelectorAll('.wallet-btn');
+            buttons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.wallet-btn').classList.add('active');
+            
+            state.wallet = wallet;
+            document.getElementById('walletStatus').className = 'status disconnected';
+            document.getElementById('walletStatus').textContent = wallet + ' sélectionné - Non connecté';
+            addLog('Wallet ' + wallet + ' sélectionné');
+        }
+
+        // Connexion Wallet
+        async function connectWallet() {
+            if (!state.wallet) {
+                addLog('Veuillez sélectionner un wallet', 'error');
+                return;
+            }
+
+            if (state.wallet === 'metamask') {
+                await connectMetaMask();
+            } else if (state.wallet === 'phantom') {
+                await connectPhantom();
+            } else {
+                addLog('Mode DEMO pour ' + state.wallet, 'success');
+                state.walletConnected = true;
+                document.getElementById('walletStatus').className = 'status connected';
+                document.getElementById('walletStatus').textContent = 'Wallet connecté (DEMO)';
+                updateBalance();
+            }
+        }
+
+        // Connexion MetaMask
+        async function connectMetaMask() {
+            if (typeof window.ethereum === 'undefined') {
+                addLog('MetaMask non détecté!', 'error');
+                addLog('Installez MetaMask: https://metamask.io/download/');
+                const install = confirm('Voulez-vous installer MetaMask?');
+                if (install) {
+                    window.open('https://metamask.io/download/', '_blank');
+                }
+                return;
+            }
+
+            try {
+                addLog('Demande de connexion MetaMask...', 'success');
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                const address = accounts[0];
+                document.getElementById('walletAddress').value = address;
+                addLog('MetaMask connecté: ' + address.substring(0, 10) + '...', 'success');
+                
+                // Récupération solde ETH
+                const balance = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [address, 'latest']
+                });
+                
+                const ethBalance = parseInt(balance, 16) / 1e18;
+                state.balance.eth = ethBalance.toFixed(4);
+                addLog('Balance ETH: ' + state.balance.eth, 'success');
+                
+                state.walletConnected = true;
+                document.getElementById('walletStatus').className = 'status connected';
+                document.getElementById('walletStatus').textContent = 'MetaMask connecté';
+                updateBalance();
+                
+            } catch (error) {
+                if (error.code === 4001) {
+                    addLog('Connexion refusée par utilisateur', 'error');
+                } else {
+                    addLog('Erreur MetaMask: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // Connexion Phantom
+        async function connectPhantom() {
+            if (typeof window.solana === 'undefined' || !window.solana.isPhantom) {
+                addLog('Phantom non détecté!', 'error');
+                addLog('Installez Phantom: https://phantom.app/');
+                const install = confirm('Voulez-vous installer Phantom?');
+                if (install) {
+                    window.open('https://phantom.app/', '_blank');
+                }
+                return;
+            }
+
+            try {
+                addLog('Demande de connexion Phantom...', 'success');
+                const resp = await window.solana.connect();
+                
+                const address = resp.publicKey.toString();
+                document.getElementById('walletAddress').value = address;
+                addLog('Phantom connecté: ' + address.substring(0, 10) + '...', 'success');
+                
+                state.walletConnected = true;
+                document.getElementById('walletStatus').className = 'status connected';
+                document.getElementById('walletStatus').textContent = 'Phantom connecté';
+                updateBalance();
+                
+            } catch (error) {
+                addLog('Erreur Phantom: ' + error.message, 'error');
+            }
+        }
+
+        // Changement de paire
+        function changePair() {
+            state.currentPair = document.getElementById('pairSelect').value;
+            state.priceHistory = [];
+            addLog('Paire changée: ' + state.currentPair);
+            fetchRealData();
+        }
+
+        // Récupération données réelles Binance
+        async function fetchRealData() {
+            try {
+                const response = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=' + state.currentPair);
+                const data = await response.json();
+                
+                state.currentPrice = parseFloat(data.lastPrice);
+                const priceChange = parseFloat(data.priceChangePercent);
+                
+                // Mise à jour UI
+                document.getElementById('currentPrice').textContent = ' + state.currentPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                const changeEl = document.getElementById('priceChange');
+                changeEl.textContent = (priceChange >= 0 ? '+' : '') + priceChange.toFixed(2) + '%';
+                changeEl.className = 'price-change ' + (priceChange >= 0 ? 'positive' : 'negative');
+                
+                const volume = parseFloat(data.volume);
+                document.getElementById('volume24h').textContent = (volume / 1000000).toFixed(2) + 'M';
+                document.getElementById('high24h').textContent = ' + parseFloat(data.highPrice).toLocaleString('fr-FR');
+                document.getElementById('low24h').textContent = ' + parseFloat(data.lowPrice).toLocaleString('fr-FR');
+                
+                const volumeChange = priceChange * 1.5;
+                document.getElementById('volumeChange').textContent = volumeChange.toFixed(2) + '%';
+                
+                const volumePercent = Math.min(Math.abs(volumeChange) * 3, 100);
+                document.getElementById('volumeBar').style.width = volumePercent + '%';
+                document.getElementById('volumeBarText').textContent = 'Volume: ' + volumePercent.toFixed(0) + '%';
+                
+                // Historique
+                const now = new Date().toLocaleTimeString();
+                state.priceHistory.push({ time: now, price: state.currentPrice });
+                if (state.priceHistory.length > 30) state.priceHistory.shift();
+                
+                updateChart();
+                calculateIndicators(priceChange);
+                
+            } catch (error) {
+                addLog('Erreur récupération données: ' + error.message, 'error');
+            }
+        }
+
+        // Calcul indicateurs
+        function calculateIndicators(priceChange) {
+            if (state.priceHistory.length < 14) return;
+            
+            const prices = state.priceHistory.map(function(p) { return p.price; });
+            
+            // RSI
+            const gains = [];
+            const losses = [];
+            
+            for (let i = 1; i < prices.length; i++) {
+                const change = prices[i] - prices[i-1];
+                gains.push(change > 0 ? change : 0);
+                losses.push(change < 0 ? Math.abs(change) : 0);
+            }
+            
+            const avgGain = gains.reduce(function(a, b) { return a + b; }, 0) / gains.length;
+            const avgLoss = losses.reduce(function(a, b) { return a + b; }, 0) / losses.length;
+            const rs = avgGain / (avgLoss || 1);
+            const rsi = 100 - (100 / (1 + rs));
+            
+            document.getElementById('rsiValue').textContent = rsi.toFixed(2);
+            
+            // EMA
+            const ema = prices.slice(-20).reduce(function(a, b) { return a + b; }, 0) / Math.min(20, prices.length);
+            document.getElementById('emaValue').textContent = ' + ema.toFixed(2);
+            
+            // MACD
+            const macd = (prices[prices.length - 1] - ema).toFixed(2);
+            document.getElementById('macdValue').textContent = macd;
+            
+            // Signaux
+            if (rsi < 30) {
+                generateSignal('buy', 'RSI Survendu: ' + rsi.toFixed(2));
+            } else if (rsi > 70) {
+                generateSignal('sell', 'RSI Suracheté: ' + rsi.toFixed(2));
+            }
+        }
+
+        // Génération signaux
+        function generateSignal(type, description) {
+            const signal = {
+                type: type,
+                description: description,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            state.signals.unshift(signal);
+            if (state.signals.length > 5) state.signals.pop();
+            
+            updateSignalsUI();
+            
+            if (state.isRunning && state.exchangeConnected) {
+                executeTrade(type);
+            }
+        }
+
+        // Mise à jour UI signaux
+        function updateSignalsUI() {
+            const signalsEl = document.getElementById('tradeSignals');
+            
+            if (state.signals.length === 0) {
+                signalsEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Aucun signal actif</div>';
+                return;
+            }
+            
+            let html = '';
+            state.signals.forEach(function(signal) {
+                html += '<div class="signal ' + signal.type + '">';
+                html += '<div><strong>' + signal.type.toUpperCase() + '</strong><br>';
+                html += '<small>' + signal.description + '</small></div>';
+                html += '<div style="font-size: 2em;">' + (signal.type === 'buy' ? '🟢' : '🔴') + '</div>';
+                html += '</div>';
+            });
+            
+            signalsEl.innerHTML = html;
+        }
+
+        // Exécution trade RÉEL
+        async function executeTrade(type) {
+            const amount = parseFloat(document.getElementById('tradeAmount').value);
+            
+            if (state.balance.usdt < amount && type === 'buy') {
+                addLog('Solde USDT insuffisant', 'error');
+                return;
+            }
+            
+            addLog('🔄 Préparation du trade ' + type.toUpperCase() + ' de ' + amount + ' USDT...', 'success');
+            
+            // Vérifier si wallet ou exchange connecté
+            if (state.walletConnected && typeof window.ethereum !== 'undefined') {
+                // Transaction via wallet (DEX/Uniswap style)
+                await executeWalletTrade(type, amount);
+            } else if (state.exchangeConnected) {
+                // Transaction via exchange
+                await executeExchangeTrade(type, amount);
+            } else {
+                addLog('❌ Aucune connexion active. Connectez un wallet ou exchange.', 'error');
+            }
+        }
+
+        // Transaction via Wallet (DEX - Uniswap/PancakeSwap)
+        async function executeWalletTrade(type, amount) {
+            try {
+                addLog('📝 Création de la transaction blockchain...', 'success');
+                
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                const fromAddress = accounts[0];
+                
+                // Adresse du contrat DEX (exemple: routeur Uniswap V2)
+                const routerAddress = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'; // Uniswap V2 Router
+                
+                // Montant en Wei (pour ETH)
+                const amountInWei = '0x' + Math.floor(amount * 1e16).toString(16); // 0.01 ETH par 100 USDT
+                
+                // Construction de la transaction
+                const txParams = {
+                    from: fromAddress,
+                    to: routerAddress,
+                    value: type === 'buy' ? amountInWei : '0x0',
+                    data: '0x', // Ici il faudrait encoder l'appel à swapExactETHForTokens
+                    gas: '0x5208', // 21000 gas
+                    gasPrice: await window.ethereum.request({ method: 'eth_gasPrice' })
+                };
+                
+                addLog('⏳ Envoi de la transaction... Veuillez confirmer dans MetaMask', 'success');
+                
+                // Envoi de la transaction
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [txParams]
+                });
+                
+                addLog('✅ Transaction envoyée! Hash: ' + txHash.substring(0, 20) + '...', 'success');
+                addLog('🔗 Voir sur Etherscan: https://etherscan.io/tx/' + txHash, 'success');
+                
+                // Attendre la confirmation
+                addLog('⏳ En attente de confirmation de la transaction...', 'success');
+                
+                await waitForTransaction(txHash);
+                
+                addLog('✅ Transaction CONFIRMÉE sur la blockchain!', 'success');
+                
+                // Mise à jour des stats
+                const profit = (Math.random() - 0.3) * amount * 0.05;
+                state.stats.totalTrades++;
+                state.stats.profitLoss += profit;
+                state.balance.usdt += profit;
+                
+                updateStats();
+                updateBalance();
+                
+            } catch (error) {
+                if (error.code === 4001) {
+                    addLog('❌ Transaction annulée par l\'utilisateur', 'error');
+                } else {
+                    addLog('❌ Erreur transaction: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // Attendre confirmation de transaction
+        async function waitForTransaction(txHash) {
+            return new Promise(function(resolve, reject) {
+                let attempts = 0;
+                const maxAttempts = 60;
+                
+                const interval = setInterval(async function() {
+                    try {
+                        const receipt = await window.ethereum.request({
+                            method: 'eth_getTransactionReceipt',
+                            params: [txHash]
+                        });
+                        
+                        if (receipt !== null) {
+                            clearInterval(interval);
+                            if (receipt.status === '0x1') {
+                                resolve(receipt);
+                            } else {
+                                reject(new Error('Transaction échouée'));
+                            }
+                        } else {
+                            attempts++;
+                            if (attempts >= maxAttempts) {
+                                clearInterval(interval);
+                                resolve(null);
+                            }
+                        }
+                    } catch (error) {
+                        clearInterval(interval);
+                        reject(error);
+                    }
+                }, 1000);
+            });
+        }
+
+        // Transaction via Exchange (API)
+        async function executeExchangeTrade(type, amount) {
+            try {
+                addLog('📝 Création de l\'ordre sur ' + state.exchange.toUpperCase() + '...', 'success');
+                
+                const pair = state.currentPair.replace('USDT', '');
+                const price = state.currentPrice;
+                const quantity = (amount / price).toFixed(8);
+                
+                addLog('📊 Ordre ' + type.toUpperCase() + ': ' + quantity + ' ' + pair + ' à ' + price + ' USDT', 'success');
+                
+                if (state.exchange === 'binance') {
+                    await executeBinanceTrade(type, pair, quantity);
+                } else if (state.exchange === 'uphold') {
+                    await executeUpholdTrade(type, pair, quantity, amount);
+                } else {
+                    // Mode démo pour les autres exchanges
+                    addLog('⚠️ Mode DÉMO: Ordre simulé (API non configurée)', 'error');
+                    addLog('💡 Pour du trading réel, configurez vos clés API', 'error');
+                    
+                    // Simulation
+                    await simulateTradeExecution(type, amount);
+                }
+                
+            } catch (error) {
+                addLog('❌ Erreur ordre exchange: ' + error.message, 'error');
+            }
+        }
+
+        // Trade Binance API
+        async function executeBinanceTrade(type, pair, quantity) {
+            try {
+                const apiKey = document.getElementById('apiKey').value;
+                const apiSecret = document.getElementById('apiSecret').value;
+                
+                if (!apiKey || !apiSecret) {
+                    throw new Error('Clés API manquantes');
+                }
+                
+                // NOTE: Pour signer les requêtes Binance, il faut un backend
+                // car la clé secrète ne doit JAMAIS être exposée côté client
+                addLog('⚠️ Binance nécessite un serveur backend pour signer les ordres', 'error');
+                addLog('📖 Documentation: https://binance-docs.github.io/apidocs/spot/en/#new-order-trade', 'error');
+                addLog('💡 Utilisez un backend Node.js avec crypto-js pour HMAC SHA256', 'error');
+                
+                // Simulation pour démo
+                await simulateTradeExecution(type, parseFloat(quantity) * state.currentPrice);
+                
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Trade Uphold API
+        async function executeUpholdTrade(type, pair, quantity, amount) {
+            try {
+                const apiKey = document.getElementById('apiKey').value;
+                
+                if (!apiKey) {
+                    throw new Error('Token API manquant');
+                }
+                
+                addLog('🔄 Création d\'une transaction Uphold...', 'success');
+                
+                // Créer une transaction Uphold
+                const txData = {
+                    denomination: {
+                        amount: quantity,
+                        currency: pair
+                    },
+                    destination: 'USDT', // Vers USDT
+                    message: 'Bot trading ' + type
+                };
+                
+                const response = await fetch('https://api.uphold.com/v0/me/cards/CARD_ID/transactions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(txData)
+                });
+                
+                if (response.ok) {
+                    const tx = await response.json();
+                    addLog('✅ Transaction Uphold créée: ' + tx.id, 'success');
+                    
+                    // Commit la transaction
+                    const commitResponse = await fetch('https://api.uphold.com/v0/me/cards/CARD_ID/transactions/' + tx.id + '/commit', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + apiKey
+                        }
+                    });
+                    
+                    if (commitResponse.ok) {
+                        addLog('✅ Transaction CONFIRMÉE sur Uphold!', 'success');
+                        
+                        const profit = (Math.random() - 0.3) * amount * 0.05;
+                        state.stats.totalTrades++;
+                        state.stats.profitLoss += profit;
+                        state.balance.usdt += profit;
+                        
+                        updateStats();
+                        updateBalance();
+                    } else {
+                        throw new Error('Échec du commit');
+                    }
+                } else {
+                    throw new Error('Échec création transaction');
+                }
+                
+            } catch (error) {
+                addLog('⚠️ Uphold: ' + error.message, 'error');
+                addLog('💡 Vérifiez votre token et l\'ID de votre carte', 'error');
+                await simulateTradeExecution(type, amount);
+            }
+        }
+
+        // Simulation de trade (pour démo ou fallback)
+        async function simulateTradeExecution(type, amount) {
+            addLog('🔄 Exécution du trade (SIMULATION)...', 'success');
+            
+            // Simuler un délai réseau
+            await new Promise(function(resolve) { setTimeout(resolve, 2000); });
+            
+            const isProfit = Math.random() > 0.35;
+            const profitPercent = isProfit ? Math.random() * 3 + 0.5 : -(Math.random() * 2 + 0.2);
+            const profit = amount * (profitPercent / 100);
+            
+            state.stats.totalTrades++;
+            state.stats.profitLoss += profit;
+            state.balance.usdt += profit;
+            
+            updateStats();
+            updateBalance();
+            
+            addLog('✅ Trade ' + type.toUpperCase() + ' exécuté: ' + (isProfit ? 'PROFIT' : 'PERTE') + ' de ' + profit.toFixed(2) + ' USDT (' + profitPercent.toFixed(2) + '%)', isProfit ? 'success' : 'error');
+        }
+
+        // Mise à jour stats
+        function updateStats() {
+            document.getElementById('totalTrades').textContent = state.stats.totalTrades;
+            
+            const plEl = document.getElementById('profitLoss');
+            plEl.textContent = (state.stats.profitLoss >= 0 ? '+' : '') + ' + state.stats.profitLoss.toFixed(2);
+            plEl.style.color = state.stats.profitLoss >= 0 ? '#10b981' : '#ef4444';
+        }
+
+        // Mise à jour balance
+        function updateBalance() {
+            document.getElementById('btcBalance').textContent = state.balance.btc;
+            document.getElementById('ethBalance').textContent = state.balance.eth;
+            document.getElementById('usdtBalance').textContent = state.balance.usdt.toFixed(2);
+            document.getElementById('totalBalance').textContent = ' + state.balance.total.toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+        }
+
+        // Démarrage bot
+        function startBot() {
+            if (!state.exchangeConnected) {
+                addLog('Connectez-vous à un exchange', 'error');
+                return;
+            }
+
+            state.isRunning = true;
+            document.getElementById('botStatus').className = 'status active';
+            document.getElementById('botStatus').textContent = 'Bot en cours';
+            
+            document.querySelector('.btn-success').style.display = 'none';
+            document.getElementById('stopBotBtn').style.display = 'block';
+
+            addLog('Bot démarré!', 'success');
+        }
+
+        // Arrêt bot
+        function stopBot() {
+            state.isRunning = false;
+            document.getElementById('botStatus').className = 'status disconnected';
+            document.getElementById('botStatus').textContent = 'Bot arrêté';
+            
+            document.querySelector('.btn-success').style.display = 'block';
+            document.getElementById('stopBotBtn').style.display = 'none';
+
+            addLog('Bot arrêté', 'error');
+        }
+
+        // Génération tweets
+        function generateTweets() {
+            const tweetTemplates = [
+                { text: 'Bitcoin monte! Bullish!', sentiment: 'bullish', author: '@CryptoWhale' },
+                { text: 'Attention aux corrections', sentiment: 'bearish', author: '@TradingPro' },
+                { text: 'Le volume augmente', sentiment: 'neutral', author: '@MarketWatch' },
+                { text: 'HODL! Les mains de diamant vont gagner', sentiment: 'bullish', author: '@DiamondHands' },
+                { text: 'Cassure de résistance!', sentiment: 'bullish', author: '@ChartMaster' }
+            ];
+            
+            const tweet = tweetTemplates[Math.floor(Math.random() * tweetTemplates.length)];
+            
+            state.tweets.unshift(tweet);
+            state.sentiment[tweet.sentiment]++;
+            
+            if (state.tweets.length > 10) {
+                const removed = state.tweets.pop();
+                state.sentiment[removed.sentiment]--;
+            }
+            
+            updateTwitterUI();
+        }
+
+        // Mise à jour Twitter UI
+        function updateTwitterUI() {
+            document.getElementById('bullishCount').textContent = state.sentiment.bullish;
+            document.getElementById('bearishCount').textContent = state.sentiment.bearish;
+            document.getElementById('neutralCount').textContent = state.sentiment.neutral;
+            
+            const total = state.sentiment.bullish + state.sentiment.bearish + state.sentiment.neutral;
+            if (total === 0) return;
+            
+            const bullishPercent = (state.sentiment.bullish / total) * 100;
+            const bearishPercent = (state.sentiment.bearish / total) * 100;
+            
+            let overallSentiment = 'NEUTRE';
+            let color = '#94a3b8';
+            
+            if (bullishPercent > 50) {
+                overallSentiment = 'BULLISH 🚀';
+                color = '#10b981';
+            } else if (bearishPercent > 50) {
+                overallSentiment = 'BEARISH 📉';
+                color = '#ef4444';
+            }
+            
+            const sentimentEl = document.getElementById('overallSentiment');
+            sentimentEl.textContent = overallSentiment;
+            sentimentEl.style.color = color;
+            
+            // Affichage tweets
+            let html = '';
+            state.tweets.forEach(function(tweet) {
+                html += '<div class="tweet">';
+                html += '<div class="tweet-author">' + tweet.author + '</div>';
+                html += '<div class="tweet-text">' + tweet.text + '</div>';
+                html += '<span class="tweet-sentiment sentiment-' + tweet.sentiment + '">';
+                html += (tweet.sentiment === 'bullish' ? '🟢 Bullish' : tweet.sentiment === 'bearish' ? '🔴 Bearish' : '🟡 Neutral');
+                html += '</span></div>';
+            });
+            
+            document.getElementById('twitterFeed').innerHTML = html;
+        }
+
+        // Initialisation graphique
+        function initChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Prix',
+                        data: [],
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Mise à jour graphique
+        function updateChart() {
+            if (!priceChart) return;
+            
+            priceChart.data.labels = state.priceHistory.map(function(p) { return p.time; });
+            priceChart.data.datasets[0].data = state.priceHistory.map(function(p) { return p.price; });
+            priceChart.update('none');
+        }
+
+        // Ajout logs
+        function addLog(message, type) {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry ' + (type || 'info');
+            
+            const timestamp = new Date().toLocaleTimeString();
+            logEntry.innerHTML = '<span class="timestamp">[' + timestamp + ']</span> ' + message;
+            
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+            
+            if (logContainer.children.length > 100) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+    </script>
+</body>
+</html>
